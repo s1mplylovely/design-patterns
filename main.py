@@ -1,20 +1,41 @@
-import asyncio
-from converters import *
+import logging
+from converter import CurrencyConverter, ExchangeRatesService, CacheService
 
-def main():    
-    amount = int(input('Введите значение в USD: \n'))
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+
+BASE_CURRENCY : str = "USD"
+TARGET_CURRENCIES : tuple[str] = ("CNY", "EUR", "GBP", "RUB", "88")
+CACHE_FILE : str = "exchange_rates.json"
+
+
+def build_converter() -> CurrencyConverter:
+    cache = CacheService(cache_file=CACHE_FILE)
+    api_service = ExchangeRatesService(cache=cache)
+    return CurrencyConverter(api_service)
+
+
+def main() -> None:
+    try: 
+        amount = float(input(f"Введите значение в {BASE_CURRENCY}: \n"))
+    except ValueError:
+        print("Ошибка: введите число.")
+        return
+
+    converter = build_converter()
+
     
-    converter = UsdRubConverter()
-    print(f"{amount} USD to RUB: {converter.convert_usd_to_rub(amount)}")
-    
-    converter = UsdEurConverter()
-    print(f"{amount} USD to EUR: {converter.convert_usd_to_eur(amount)}")
-    
-    converter = UsdGbpConverter()
-    print(f"{amount} USD to GBP: {converter.convert_usd_to_gbp(amount)}")
-    
-    converter = UsdCnyConverter()
-    print(f"{amount} USD to CNY: {converter.convert_usd_to_cny(amount)}")
+    try:
+        for currency in TARGET_CURRENCIES:
+            result = converter.convert(amount, BASE_CURRENCY, currency)
+            print(f"{amount} {BASE_CURRENCY} to {currency}: {result:.2f}")
+    except ValueError as e:
+        print(f"Конвертация в {currency} невозможна: {e}")
+    except RuntimeError as e:
+            print(f"Сервис недоступен: {e}")
+
 
 if __name__ == "__main__":
     main()
